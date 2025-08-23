@@ -1,0 +1,64 @@
+version: '3.9'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: mcp-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mcp
+    container_name: mcp-server
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - mcp-network
+    volumes:
+      - ./logs/mcp:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.nginx
+    container_name: mcp-nginx
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+    networks:
+      - mcp-network
+    volumes:
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+
+networks:
+  mcp-network:
+    driver: bridge
+
+volumes:
+  redis-data:

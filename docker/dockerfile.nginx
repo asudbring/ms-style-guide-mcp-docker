@@ -1,0 +1,21 @@
+FROM nginx:1.25-alpine
+
+# Remove default config
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Install OpenSSL for cert generation (if needed)
+RUN apk add --no-cache openssl
+
+# Copy custom nginx config
+COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY docker/nginx/conf.d/ /etc/nginx/conf.d/
+
+# Create directories
+RUN mkdir -p /etc/nginx/ssl /var/cache/nginx /var/log/nginx
+
+# Expose ports
+EXPOSE 443
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider https://localhost/health || exit 1

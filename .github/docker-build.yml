@@ -1,0 +1,90 @@
+name: Docker Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Generate self-signed certificates
+      run: |
+        chmod +x scripts/generate-certs.sh
+        ./scripts/generate-certs.sh
+    
+    - name: Create style_analyzer.py
+      run: |
+        # In a real scenario, this would be part of your repository
+        echo "# Placeholder for CI - copy from your actual analyzer" > src/style_analyzer.py
+    
+    - name: Build Docker images
+      run: |
+        docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
+    
+    - name: Start services
+      run: |
+        docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+        sleep 10  # Wait for services to be ready
+    
+    - name: Run tests
+      run: |
+        chmod +x scripts/test-deployment.sh
+        ./scripts/test-deployment.sh
+    
+    - name: Show logs on failure
+      if: failure()
+      run: |
+        docker-compose logs
+    
+    - name: Stop services
+      if: always()
+      run: |
+        docker-compose down -v
+    
+  docker-hub-push:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Build and push MCP server
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: docker/Dockerfile.mcp
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/mcp-style-guide-server:latest
+          ${{ secrets.DOCKER_USERNAME }}/mcp-style-guide-server:${{ github.sha }}
+    
+    - name: Build and push NGINX
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: docker/Dockerfile.nginx
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/mcp-style-guide-nginx:latest
+          ${{ secrets.DOCKER_USERNAME }}/mcp-style-guide-nginx:${{ github.sha }}
