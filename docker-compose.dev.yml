@@ -1,0 +1,45 @@
+version: '3.9'
+
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: docker/dockerfile.mcp
+    container_name: mcp-server
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
+    networks:
+      - mcp-network
+    volumes:
+      - ./logs/mcp:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/dockerfile.nginx
+    container_name: mcp-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+    networks:
+      - mcp-network
+    volumes:
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - ./docker/nginx/nginx-dev.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d/mcp-server-dev.conf:/etc/nginx/conf.d/mcp-server.conf:ro
+      - ./logs/nginx:/var/log/nginx
+
+networks:
+  mcp-network:
+    driver: bridge

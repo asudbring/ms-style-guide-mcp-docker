@@ -1,305 +1,308 @@
-# MCP Style Guide Server - Docker Deployment
+# Microsoft Style Guide MCP Server - Docker Deployment
 
-Production-ready Docker deployment of the Microsoft Style Guide MCP Server with HTTPS support, designed for easy Azure migration.
+A production-ready Docker deployment of the Microsoft Style Guide MCP Server. It provides dual HTTP/HTTPS support and cross-platform setup scripts.
+
+## Features
+
+- **Dual Protocol Support**: HTTP (VS Code optimized) and HTTPS (production ready)
+- **Cross-Platform**: Linux bash scripts + Windows PowerShell scripts
+- **Auto-Configuration**: Automated VS Code MCP setup
+- **Stateless Design**: No Redis dependency, simplified architecture
+- **Production Ready**: NGINX reverse proxy with SSL termination
 
 ## Architecture
 
-- **NGINX** (Port 443): Reverse proxy with HTTPS termination
-- **FastAPI MCP Server** (Port 8000): HTTP-based MCP implementation
-- **Redis**: Session management and caching
-- **Docker Compose**: Orchestration with health checks
+- **NGINX** (Ports 80/443): Reverse proxy with HTTP and HTTPS endpoints
+- **FastAPI MCP Server** (Port 8000): Stateless HTTP-based MCP implementation
+- **Docker Compose**: Orchestration with health checks and auto-restart
 
 ## Quick Start
 
-### 1. Project Setup
+### Windows Users
+```powershell
+# Option 1: Fully automated setup
+.\scripts\windows\full-auto-setup.bat
 
-```bash
-# Create project structure
-mkdir mcp-style-guide-docker
-cd mcp-style-guide-docker
+# Option 2: PowerShell quick start
+.\scripts\windows\quick-start.ps1
 
-# Create directory structure
-mkdir -p src docker/nginx/ssl docker/nginx/conf.d scripts logs/mcp logs/nginx .vscode
-
-# Copy all artifact files to their respective locations
-# Make scripts executable
-chmod +x scripts/*.sh
+# Option 3: Step by step
+.\scripts\windows\check-prerequisites.ps1
+.\scripts\windows\generate-certs-fast.ps1
+.\scripts\windows\build.ps1
+.\scripts\windows\deploy.ps1
+.\scripts\windows\test-mcp-installation.ps1
+.\scripts\windows\install-mcp-config.ps1
 ```
 
-### 2. Generate Certificates
-
+### Linux/macOS Users
 ```bash
+# Quick start
+./scripts/quick-start.sh
+
+# Step by step
+./scripts/check-prerequisites.sh
 ./scripts/generate-certs.sh
-```
-
-### 3. Build and Deploy
-
-```bash
-# Build containers
 ./scripts/build.sh
-
-# Deploy services
-./scripts/deploy.sh
+./scripts/deploy-sh.sh
 ```
 
-### 4. Configure VS Code
+## Available Endpoints
 
-Copy the MCP configuration to your VS Code user settings:
-- Windows: `%APPDATA%\Code\User\mcp.json`
-- macOS: `~/Library/Application Support/Code/User/mcp.json`
-- Linux: `~/.config/Code/User/mcp.json`
+After deployment, the MCP server will be available at:
+- **HTTP**: `http://localhost/mcp` (recommended for VS Code)
+- **HTTPS**: `https://localhost/mcp` (for production use)
+- **Health Check**: `http://localhost/health` or `https://localhost/health`
 
+## VS Code Integration
+
+The MCP server provides four tools for GitHub Copilot:
+1. **analyze_content** - Analyze text against Microsoft Style Guide principles
+2. **get_style_guidelines** - Get specific style guidelines by category
+3. **suggest_improvements** - Get improvement suggestions for content
+4. **search_style_guide_live** - Search Microsoft Style Guide website
+
+### Automatic Configuration
+Windows users can run:
+```powershell
+.\scripts\windows\install-mcp-config.ps1
+```
+
+### Manual Configuration
+Add to your VS Code MCP settings (`%APPDATA%\Code\User\mcp.json` on Windows):
 ```json
 {
   "servers": {
     "microsoft-style-guide-docker": {
       "type": "http",
-      "url": "https://localhost/mcp",
-      "transport": "http+sse",
-      "headers": {
-        "Content-Type": "application/json"
-      },
-      "initialization": {
-        "endpoint": "https://localhost/mcp/initialize",
-        "method": "POST"
-      },
-      "tls": {
-        "rejectUnauthorized": false
-      }
+      "url": "http://localhost/mcp"
     }
   }
 }
 ```
 
-## Testing
+## Testing the Installation
 
 ### Verify Services
-
 ```bash
-# Check all services are running
+# Check container status
 docker-compose ps
 
-# Test HTTPS endpoint
-curl -k https://localhost/health
-
-# Test MCP initialization
-curl -k -X POST https://localhost/mcp/initialize \
+# Test HTTP endpoint
+curl -X POST http://localhost/mcp \
   -H "Content-Type: application/json" \
-  -H "X-MCP-Client-Name: test-client"
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
+
+# Test HTTPS endpoint (with self-signed cert)
+curl -k -X POST https://localhost/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
 ```
 
-### VS Code Integration
+### VS Code Testing
+1. Restart VS Code completely
+2. Open GitHub Copilot Chat
+3. Enable agent mode (@)
+4. Ask: "Analyze this text for Microsoft Style Guide compliance: Hello, this is a test."
 
-1. Open VS Code
-2. Ensure MCP extension is installed
-3. Look for "microsoft-style-guide-docker" in MCP servers list
-4. Test with: `@microsoft-style-guide-docker analyze "Your text here"`
-
-## Development Workflow
-
-Since this is configured for production-like development:
+## Development
 
 ### Making Code Changes
-
-1. Edit files in `src/` directory
+1. Edit files in the `src/` directory
 2. Rebuild and redeploy:
 ```bash
 # Stop services
 docker-compose down
 
-# Rebuild
+# Rebuild and redeploy
 ./scripts/build.sh
-
-# Deploy
-./scripts/deploy.sh
+./scripts/deploy-sh.sh
 ```
 
 ### Viewing Logs
-
 ```bash
 # All services
 docker-compose logs -f
 
 # Specific service
 docker-compose logs -f mcp-server
-docker-compose logs -f nginx
-
-# Access logs
-docker exec mcp-nginx tail -f /var/log/nginx/mcp-access.log
+docker-compose logs -f mcp-nginx
 ```
+
+### Development vs Production Configurations
+- **Development**: Use `docker-compose.dev.yml` for HTTP/HTTPS dual support
+- **Production**: Use `docker-compose.yml` or `docker-compose.prod.yml`
+
+## Configuration Files
+
+### Docker Compose Files
+- `docker-compose.yml` - Base configuration
+- `docker-compose.prod.yml` - Production overrides
+- `docker-compose.dev.yml` - Development with dual protocol support
+
+### NGINX Configurations
+- `docker/nginx/nginx.conf` - Production NGINX config
+- `docker/nginx/nginx-dev.conf` - Development NGINX config
+- `docker/nginx/conf.d/mcp-server.conf` - Production server block
+- `docker/nginx/conf.d/mcp-server-dev.conf` - Development server block
 
 ## Certificate Management
 
-### Using Commercial Certificates
+### Self-Signed Certificates (Development)
+The setup scripts automatically generate self-signed certificates for HTTPS support. For VS Code integration, HTTP is recommended to avoid certificate validation issues.
 
-1. Prepare your certificate files:
-   - Certificate: `your-domain.crt`
-   - Private key: `your-domain.key`
-   - Certificate chain: `your-domain-chain.crt`
+### Production Certificates
+1. Replace certificate files in `docker/nginx/ssl/`:
+   - `cert.pem` - Your SSL certificate
+   - `key.pem` - Your private key
 
-2. Combine certificates:
+2. Update NGINX configuration for your domain
+3. Restart containers:
 ```bash
-cat your-domain.crt your-domain-chain.crt > combined-cert.pem
-```
-
-3. Replace certificates:
-```bash
-# Backup existing
-mv docker/nginx/ssl/cert.pem docker/nginx/ssl/cert.pem.backup
-mv docker/nginx/ssl/key.pem docker/nginx/ssl/key.pem.backup
-
-# Copy new certificates
-cp combined-cert.pem docker/nginx/ssl/cert.pem
-cp your-domain.key docker/nginx/ssl/key.pem
-
-# Set permissions
-chmod 644 docker/nginx/ssl/cert.pem
-chmod 600 docker/nginx/ssl/key.pem
-```
-
-4. Update NGINX configuration (if using custom domain):
-```nginx
-server_name your-domain.com;
-```
-
-5. Update VS Code configuration:
-```json
-"url": "https://your-domain.com/mcp",
-"tls": {
-  "rejectUnauthorized": true
-}
-```
-
-6. Restart NGINX:
-```bash
-docker-compose restart nginx
-```
-
-## Azure Migration
-
-This setup is designed for minimal changes when migrating to Azure:
-
-### 1. Build for Azure Container Registry
-
-```bash
-# Tag images
-docker tag mcp-style-guide-docker_mcp-server:latest yourregistry.azurecr.io/mcp-server:latest
-docker tag mcp-style-guide-docker_nginx:latest yourregistry.azurecr.io/mcp-nginx:latest
-
-# Push to registry
-docker push yourregistry.azurecr.io/mcp-server:latest
-docker push yourregistry.azurecr.io/mcp-nginx:latest
-```
-
-### 2. Update Environment Variables
-
-Create Azure-specific `.env`:
-```env
-REDIS_URL=your-azure-redis.redis.cache.windows.net:6380
-AZURE_READY=true
-KEY_VAULT_URL=https://your-keyvault.vault.azure.net/
-```
-
-### 3. Deploy to Azure Container Apps
-
-The containers are ready for Azure Container Apps with:
-- Health checks configured
-- Non-root user
-- Proper resource limits
-- Environment-based configuration
-
-## Monitoring
-
-### Container Stats
-```bash
-docker stats
-```
-
-### Service Health
-```bash
-# Check MCP server health
-curl -k https://localhost/health
-
-# Check Redis
-docker-compose exec redis redis-cli ping
-```
-
-### Resource Usage
-```bash
-# View resource consumption
-docker-compose top
+docker-compose restart
 ```
 
 ## Troubleshooting
 
-### Certificate Errors in VS Code
-- Ensure `"rejectUnauthorized": false` is set for self-signed certs
-- Check certificate file permissions
+### VS Code Connection Issues
+- **SSL Errors**: Use HTTP endpoint (`http://localhost/mcp`) instead of HTTPS
+- **Configuration**: Run the installer script: `.\scripts\windows\install-mcp-config.ps1`
+- **Restart Required**: Completely close and restart VS Code after configuration changes
 
-### Connection Refused
+### Container Issues
 ```bash
-# Verify all services are healthy
+# Check container status
 docker-compose ps
 
-# Check NGINX is listening
-docker-compose exec nginx netstat -tlnp
+# View container logs
+docker-compose logs mcp-server
+docker-compose logs mcp-nginx
+
+# Restart services
+docker-compose restart
 ```
 
-### Session Errors
+### Port Conflicts
 ```bash
-# Check Redis connection
-docker-compose exec redis redis-cli
-> ping
-> keys session:*
+# Check what's using ports 80/443
+netstat -tlnp | grep :80
+netstat -tlnp | grep :443
+
+# Windows equivalent
+netstat -ano | findstr :80
+netstat -ano | findstr :443
 ```
 
-### CORS Issues
-- Check browser console for specific CORS errors
-- Verify ALLOWED_ORIGINS in environment
-- Check NGINX CORS headers are being set
+### Network Connectivity
+```bash
+# Test health endpoint
+curl http://localhost/health
 
-## File Structure
+# Test MCP endpoint
+curl -X POST http://localhost/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {"roots": {"listChanged": true}}, "clientInfo": {"name": "test", "version": "1.0"}}}'
+```
+
+## Project Structure
 
 ```
-mcp-style-guide-docker/
+ms-style-guide-mcp-docker/
 ├── src/
-│   ├── mcp_http_server.py      # FastAPI MCP server
-│   ├── style_analyzer.py       # Microsoft Style Guide analyzer
-│   ├── config.py              # Configuration management
-│   └── requirements.txt       # Python dependencies
+│   ├── mcp_http_server.py       # FastAPI MCP server (stateless)
+│   ├── style_analyzer.py        # Microsoft Style Guide analyzer
+│   ├── mcp_config.py           # Configuration management
+│   └── requirements.txt        # Python dependencies
 ├── docker/
-│   ├── Dockerfile.mcp         # MCP server image
-│   ├── Dockerfile.nginx       # NGINX image
+│   ├── dockerfile.mcp          # MCP server container
+│   ├── dockerfile.nginx        # NGINX container
 │   └── nginx/
-│       ├── nginx.conf         # Main NGINX config
+│       ├── nginx.conf          # Production NGINX config
+│       ├── nginx-dev.conf      # Development NGINX config
 │       ├── conf.d/
-│       │   └── mcp-server.conf # MCP server config
-│       └── ssl/               # SSL certificates
+│       │   ├── mcp-server.conf     # Production server config
+│       │   └── mcp-server-dev.conf # Development server config
+│       └── ssl/                # SSL certificates directory
+│           └── .gitkeep        # Placeholder file
 ├── scripts/
-│   ├── generate-certs.sh      # Certificate generation
-│   ├── build.sh              # Build script
-│   └── deploy.sh             # Deployment script
-├── docker-compose.yml         # Base compose config
+│   ├── Linux/macOS bash scripts:
+│   ├── build.sh               # Build containers
+│   ├── check-prerequisites.sh # Verify requirements
+│   ├── deploy-sh.sh          # Deploy services
+│   ├── generate-certs.sh     # Generate SSL certificates
+│   ├── install-mcp-config.sh # Configure VS Code
+│   ├── quick-start.sh        # Complete setup
+│   └── windows/              # Windows PowerShell scripts
+│       ├── build.ps1
+│       ├── check-prerequisites.ps1
+│       ├── deploy.ps1
+│       ├── full-auto-setup.bat      # Fully automated setup
+│       ├── generate-certs-fast.ps1
+│       ├── install-mcp-config.ps1
+│       ├── quick-start.ps1
+│       ├── test-mcp-installation.ps1
+│       └── README.md               # Windows-specific documentation
+├── .vscode/
+│   └── mcp-config.json        # Sample VS Code MCP configuration
+├── docker-compose.yml         # Base configuration
 ├── docker-compose.prod.yml    # Production overrides
+├── docker-compose.dev.yml     # Development configuration
+├── .gitignore                 # Git ignore rules
 ├── .dockerignore             # Docker ignore rules
-├── .env.example              # Environment template
-└── logs/                     # Application logs
+├── .env.example              # Environment variables template
+└── README.md                 # This file
 ```
 
-## Security Notes
+## Environment Variables
 
-- This deployment has **no authentication** as requested
-- HTTPS is enforced with modern TLS configuration
-- Non-root user in containers
-- Health checks don't expose sensitive data
-- Session management with Redis TTL
+The server supports these environment variables (see `.env.example`):
+
+```env
+# Server Configuration
+LOG_LEVEL=INFO
+PYTHONUNBUFFERED=1
+
+# NGINX Configuration  
+NGINX_PORT=443
+NGINX_HTTP_PORT=80
+
+# Development Settings
+DEVELOPMENT_MODE=false
+```
+
+## Security Considerations
+
+- **No Authentication**: This deployment has no built-in authentication as designed for local development
+- **HTTPS Support**: Production-ready SSL/TLS configuration with modern cipher suites
+- **Non-root Containers**: Both containers run with non-privileged users
+- **Network Isolation**: Containers communicate over isolated Docker network
+- **Health Checks**: Automated health monitoring for service reliability
 
 ## Performance
 
-- NGINX configured for optimal performance
-- Gzip compression enabled
-- Connection pooling
-- Health checks for auto-recovery
-- Production-ready logging
+- **Stateless Design**: No session state, enabling horizontal scaling
+- **NGINX Optimization**: Configured for optimal performance with gzip compression
+- **Connection Pooling**: Efficient connection management
+- **Health Checks**: Automatic service recovery
+- **Resource Limits**: Configured resource constraints for production deployment
 
-For more information about the MCP protocol and VS Code integration, see the main project documentation.
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test with both HTTP and HTTPS endpoints
+5. Verify cross-platform compatibility (test Windows scripts if modifying them)
+6. Submit a pull request
+
+## Support
+
+For issues and questions:
+1. Check the troubleshooting section above
+2. Review container logs: `docker-compose logs`
+3. Verify service health: `curl http://localhost/health`
+4. Test MCP tools directly via curl commands shown in testing section
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
