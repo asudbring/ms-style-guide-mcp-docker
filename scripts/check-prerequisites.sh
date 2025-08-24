@@ -68,12 +68,6 @@ fi
 # Check OpenSSL
 check_command openssl "OpenSSL" "Usually pre-installed on most systems"
 
-# Check Python (for local testing)
-if check_command python3 "Python 3" "https://www.python.org/downloads/"; then
-    PYTHON_VERSION=$(python3 --version | grep -oE '[0-9]+\.[0-9]+')
-    check_version "$PYTHON_VERSION" "3.8" "Python"
-fi
-
 # Check available ports
 echo -e "\nChecking port availability..."
 for port in 443; do
@@ -110,14 +104,7 @@ fi
 # Check if VS Code is installed (optional)
 echo -e "\nChecking optional components..."
 if check_command code "Visual Studio Code" "https://code.visualstudio.com/"; then
-    # Check for MCP extension
-    if code --list-extensions 2>/dev/null | grep -q "modelcontextprotocol"; then
-        echo -e "${GREEN}✓ VS Code MCP extension is installed${NC}"
-    else
-        echo -e "${YELLOW}⚠ VS Code MCP extension not found${NC}"
-        echo "  Install it from the VS Code marketplace"
-        ((WARNINGS++))
-    fi
+    echo -e "${GREEN}✓ VS Code found - MCP support is built-in${NC}"
 fi
 
 # Summary

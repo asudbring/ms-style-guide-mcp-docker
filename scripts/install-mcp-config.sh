@@ -90,8 +90,12 @@ get_vscode_user_dir() {
         Linux*)
             user_dir="$HOME/.config/Code/User"
             ;;
+        MINGW64_NT-*|MSYS_NT-*|CYGWIN_NT-*)
+            # Windows (Git Bash, MSYS2, Cygwin)
+            user_dir="$HOME/AppData/Roaming/Code/User"
+            ;;
         *)
-            write_color "❌ Unsupported operating system" "red"
+            write_color "❌ Unsupported operating system: $(uname -s)" "red"
             exit 1
             ;;
     esac
@@ -252,7 +256,7 @@ main() {
     read -r -d '' server_config << 'EOF' || true
 {
   "type": "http",
-  "url": "https://localhost/mcp"
+  "url": "http://localhost/mcp"
 }
 EOF
     
@@ -286,8 +290,8 @@ EOF
     write_color "5. Or use quick actions: Analyze, Improve, Guidelines" "white"
     write_color ""
     write_color "🔧 Verification commands:" "white"
-    write_color "  curl -k https://localhost/health" "gray"
-    write_color "  curl -k -X POST https://localhost/mcp/initialize -H \"Content-Type: application/json\"" "gray"
+    write_color "  curl http://localhost/health" "gray"
+    write_color "  curl -X POST http://localhost/mcp/initialize -H \"Content-Type: application/json\"" "gray"
     write_color ""
     
     # Check if VS Code is currently running
