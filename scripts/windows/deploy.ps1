@@ -193,14 +193,14 @@ try {
         Write-Host ""
         Write-Host "Step 5: Configuring VS Code MCP integration..." -ForegroundColor Yellow
         
-        $vsCodeConfigScript = "$PSScriptRoot\install-mcp-config-simple.ps1"
+        $vsCodeConfigScript = "$PSScriptRoot\install-mcp-config.ps1"
         if (Test-Path $vsCodeConfigScript) {
             try {
-                & $vsCodeConfigScript
+                & $vsCodeConfigScript -Force
                 Write-Host "[OK] VS Code configuration completed" -ForegroundColor Green
             } catch {
                 Write-Host "[WARN] VS Code configuration failed, but services are running" -ForegroundColor Yellow
-                Write-Host "You can manually run: scripts\windows\install-mcp-config-simple.ps1" -ForegroundColor Gray
+                Write-Host "You can manually run: scripts\windows\install-mcp-config.ps1" -ForegroundColor Gray
             }
         } else {
             Write-Host "[WARN] VS Code configuration script not found" -ForegroundColor Yellow
