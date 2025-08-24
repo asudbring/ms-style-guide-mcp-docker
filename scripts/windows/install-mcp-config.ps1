@@ -202,7 +202,7 @@ try {
     # Define the new server configuration (simplified for better compatibility)
     $serverConfig = @{
         type = "http"
-        url = "https://localhost/mcp"
+        url = "http://localhost/mcp"
     }
     
     # Merge or create configuration
@@ -227,8 +227,8 @@ try {
     Write-ColorOutput "5. Or use quick actions: Analyze, Improve, Guidelines" "White"
     Write-ColorOutput ""
     Write-ColorOutput "🔧 Verification commands:" "White"
-    Write-ColorOutput "  curl -k https://localhost/health" "Gray"
-    Write-ColorOutput "  curl -k -X POST https://localhost/mcp -H `"Content-Type: application/json`" -d '{`"jsonrpc`":`"2.0`",`"id`":1,`"method`":`"tools/list`",`"params`":{}}'" "Gray"
+    Write-ColorOutput "  curl http://localhost/health" "Gray"
+    Write-ColorOutput "  curl -X POST http://localhost/mcp -H `"Content-Type: application/json`" -d '{`"jsonrpc`":`"2.0`",`"id`":1,`"method`":`"tools/list`",`"params`":{}}'" "Gray"
     Write-ColorOutput ""
     
     # Check if VS Code is currently running
