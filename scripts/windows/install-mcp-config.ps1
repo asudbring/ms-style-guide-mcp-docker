@@ -228,7 +228,7 @@ try {
     Write-ColorOutput ""
     Write-ColorOutput "🔧 Verification commands:" "White"
     Write-ColorOutput "  curl -k https://localhost/health" "Gray"
-    Write-ColorOutput "  curl -k -X POST https://localhost/mcp -H `"Content-Type: application/json`" -d '{`"jsonrpc`":`"2.0`",`"id`":1,`"method`":`"tools/list`",`"params`":{}}''" "Gray"
+    Write-ColorOutput "  curl -k -X POST https://localhost/mcp -H `"Content-Type: application/json`" -d '{`"jsonrpc`":`"2.0`",`"id`":1,`"method`":`"tools/list`",`"params`":{}}'" "Gray"
     Write-ColorOutput ""
     
     # Check if VS Code is currently running

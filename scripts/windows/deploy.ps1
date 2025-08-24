@@ -38,13 +38,23 @@ try {
     Write-Host "⚠ MCP server health check failed" -ForegroundColor Red
 }
 
-Write-Host "Testing NGINX health..." -ForegroundColor Cyan
+Write-Host "Testing NGINX health (HTTP for VS Code)..." -ForegroundColor Cyan
+try {
+    docker-compose exec -T nginx wget -O- http://localhost/health
+    Write-Host "✓ NGINX HTTP health check passed" -ForegroundColor Green
+} catch {
+    Write-Host "⚠ NGINX HTTP health check failed" -ForegroundColor Red
+}
+
+Write-Host "Testing NGINX health (HTTPS for production)..." -ForegroundColor Cyan
 try {
     docker-compose exec -T nginx wget --no-check-certificate -O- https://localhost/health
-    Write-Host "✓ NGINX health check passed" -ForegroundColor Green
+    Write-Host "✓ NGINX HTTPS health check passed" -ForegroundColor Green
 } catch {
-    Write-Host "⚠ NGINX health check failed" -ForegroundColor Red
+    Write-Host "⚠ NGINX HTTPS health check failed" -ForegroundColor Red
 }
 
 Write-Host "Deployment complete!" -ForegroundColor Green
-Write-Host "MCP Server is available at https://localhost/" -ForegroundColor Cyan
+Write-Host "MCP Server URLs:" -ForegroundColor Cyan
+Write-Host "  HTTP (VS Code):  http://localhost/mcp" -ForegroundColor White
+Write-Host "  HTTPS (Testing): https://localhost/mcp" -ForegroundColor White

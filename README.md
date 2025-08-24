@@ -50,9 +50,16 @@ A production-ready Docker deployment of the Microsoft Style Guide MCP Server. It
 ## Available Endpoints
 
 After deployment, the MCP server will be available at:
-- **HTTP**: `http://localhost/mcp` (recommended for VS Code)
-- **HTTPS**: `https://localhost/mcp` (for production use)
-- **Health Check**: `http://localhost/health` or `https://localhost/health`
+
+### HTTP Endpoint (Recommended for VS Code)
+- **MCP Server**: `http://localhost/mcp`
+- **Health Check**: `http://localhost/health`
+- **Use Case**: VS Code MCP integration (no certificate issues)
+
+### HTTPS Endpoint (Production Testing)
+- **MCP Server**: `https://localhost/mcp` 
+- **Health Check**: `https://localhost/health`
+- **Use Case**: Production testing with SSL (uses self-signed certificates)
 
 ## VS Code Integration
 

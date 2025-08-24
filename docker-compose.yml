@@ -27,6 +27,7 @@ services:
     container_name: mcp-nginx
     restart: unless-stopped
     ports:
+      - "80:80"
       - "443:443"
     depends_on:
       mcp-server:

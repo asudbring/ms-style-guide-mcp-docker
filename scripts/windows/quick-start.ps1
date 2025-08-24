@@ -135,3 +135,4 @@ Write-Host "  make test     - Run tests" -ForegroundColor White
 Write-Host "  make restart  - Restart services" -ForegroundColor White
 Write-Host "  make help     - Show all commands" -ForegroundColor White
 Write-Host ""
+
