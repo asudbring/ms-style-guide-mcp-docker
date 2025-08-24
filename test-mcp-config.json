@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "microsoft-style-guide": {
+      "command": "node",
+      "args": ["-e", "console.log('MCP HTTP Transport for VS Code')"],
+      "transport": {
+        "type": "http",
+        "url": "http://localhost/mcp"
+      }
+    }
+  }
+}
