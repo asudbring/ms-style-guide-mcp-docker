@@ -57,11 +57,30 @@ echo "✅ Deployment Complete!"
 echo ""
 echo "MCP Server is available at: https://localhost/"
 echo ""
+
+# Auto-install MCP configuration if requested
+if [[ "${AUTO_INSTALL_MCP}" == "true" ]] || [[ "${AUTO_INSTALL_MCP}" == "1" ]]; then
+    echo "🔧 Auto-installing VS Code MCP configuration..."
+    if ./scripts/install-mcp-config.sh --quiet; then
+        echo "✅ VS Code MCP configuration installed automatically!"
+    else
+        echo "⚠️  Auto-installation failed. You can run it manually:"
+        echo "  ./scripts/install-mcp-config.sh"
+    fi
+    echo ""
+fi
+
 echo "Next steps:"
-echo "1. Configure VS Code with the provided mcp-config.json"
-echo "2. Copy .vscode/mcp-config.json content to your VS Code user settings"
-echo "3. Restart VS Code"
-echo "4. Test with: @microsoft-style-guide-docker analyze \"Your text here\""
+if [[ "${AUTO_INSTALL_MCP}" == "true" ]] || [[ "${AUTO_INSTALL_MCP}" == "1" ]]; then
+    echo "1. Restart VS Code to load the new MCP configuration"
+    echo "2. Test with: @microsoft-style-guide-docker analyze \"Your text here\""
+else
+    echo "1. Run automatic VS Code configuration:"
+    echo "   ./scripts/install-mcp-config.sh"
+    echo "2. OR manually copy .vscode/mcp-config.json to your VS Code user settings"
+    echo "3. Restart VS Code"
+    echo "4. Test with: @microsoft-style-guide-docker analyze \"Your text here\""
+fi
 echo ""
 echo "Useful commands:"
 echo "  make logs     - View logs"

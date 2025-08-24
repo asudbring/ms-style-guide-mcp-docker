@@ -30,6 +30,11 @@ COPY --from=builder /root/.local /root/.local
 # Create non-root user
 RUN useradd -m -u 1000 mcpuser
 
+# Copy the packages to mcpuser's home and fix permissions
+RUN cp -r /root/.local /home/mcpuser/ && \
+    chown -R mcpuser:mcpuser /home/mcpuser/.local && \
+    chmod +x /home/mcpuser/.local/bin/*
+
 # Set working directory
 WORKDIR /app
 
@@ -40,7 +45,7 @@ COPY --chown=mcpuser:mcpuser src/ .
 USER mcpuser
 
 # Make sure scripts are in PATH
-ENV PATH=/root/.local/bin:$PATH
+ENV PATH=/home/mcpuser/.local/bin:$PATH
 
 # Expose port
 EXPOSE 8000

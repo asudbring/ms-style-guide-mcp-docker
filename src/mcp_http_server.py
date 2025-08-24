@@ -1,16 +1,13 @@
 import asyncio
 import json
-import uuid
 import logging
-from datetime import datetime
 from typing import Dict, Optional, Any
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Response, HTTPException, Header
+from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import redis.asyncio as redis
 import uvicorn
 
 from style_analyzer import WebEnabledStyleGuideAnalyzer
@@ -18,39 +15,6 @@ from style_analyzer import WebEnabledStyleGuideAnalyzer
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Session manager
-class SessionManager:
-    def __init__(self, redis_client):
-        self.redis = redis_client
-        self.ttl = 3600  # 1 hour session TTL
-    
-    async def create_session(self, client_info: dict) -> str:
-        session_id = str(uuid.uuid4())
-        session_data = {
-            "id": session_id,
-            "created_at": datetime.utcnow().isoformat(),
-            "client_info": json.dumps(client_info),
-            "last_activity": datetime.utcnow().isoformat()
-        }
-        
-        await self.redis.hset(f"session:{session_id}", mapping=session_data)
-        await self.redis.expire(f"session:{session_id}", self.ttl)
-        return session_id
-    
-    async def get_session(self, session_id: str) -> Optional[dict]:
-        data = await self.redis.hgetall(f"session:{session_id}")
-        if not data:
-            return None
-        
-        # Update last activity
-        await self.redis.hset(f"session:{session_id}", "last_activity", datetime.utcnow().isoformat())
-        await self.redis.expire(f"session:{session_id}", self.ttl)
-        
-        return {k.decode(): v.decode() for k, v in data.items()}
-    
-    async def delete_session(self, session_id: str):
-        await self.redis.delete(f"session:{session_id}")
 
 # MCP Request/Response models
 class MCPRequest(BaseModel):
@@ -69,20 +33,13 @@ class MCPResponse(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    app.state.redis = await redis.from_url(
-        "redis://redis:6379",
-        encoding="utf-8",
-        decode_responses=False
-    )
-    app.state.session_manager = SessionManager(app.state.redis)
     app.state.analyzer = WebEnabledStyleGuideAnalyzer()
-    logger.info("MCP HTTP Server started")
+    logger.info("MCP HTTP Server started (stateless mode)")
     
     yield
     
     # Shutdown
     await app.state.analyzer.close_session()
-    await app.state.redis.close()
     logger.info("MCP HTTP Server stopped")
 
 # Create FastAPI app
@@ -115,57 +72,27 @@ async def health_check():
         "transport": "http+sse"
     }
 
-# MCP initialization endpoint
-@app.post("/mcp/initialize")
-async def initialize_session(request: Request):
-    client_info = {
-        "user_agent": request.headers.get("user-agent"),
-        "client_ip": request.client.host,
-        "client_name": request.headers.get("x-mcp-client-name", "unknown")
-    }
-    
-    session_id = await app.state.session_manager.create_session(client_info)
-    
-    return {
-        "jsonrpc": "2.0",
-        "result": {
-            "protocolVersion": "0.1.0",
-            "serverInfo": {
-                "name": "microsoft-style-guide",
-                "version": "2.0.0",
-                "transport": "http+sse"
-            },
-            "capabilities": {
-                "tools": True,
-                "resources": False,
-                "prompts": True
-            },
-            "sessionId": session_id
-        },
-        "id": 1
-    }
-
-# Main MCP endpoint
+# Main MCP endpoint - stateless, handles all MCP methods
 @app.post("/mcp")
 async def handle_mcp_request(
-    mcp_request: MCPRequest,
-    mcp_session_id: Optional[str] = Header(None)
+    mcp_request: MCPRequest
 ):
-    # Validate session
-    if mcp_session_id:
-        session = await app.state.session_manager.get_session(mcp_session_id)
-        if not session:
-            raise HTTPException(status_code=401, detail="Invalid or expired session")
-    
+    # Stateless MCP server - no session management needed
     try:
         # Route to appropriate handler
-        if mcp_request.method == "tools/list":
+        if mcp_request.method == "initialize":
+            result = await handle_initialize(mcp_request.params)
+        elif mcp_request.method == "tools/list":
             result = await handle_tools_list()
         elif mcp_request.method == "tools/call":
+            if mcp_request.params is None:
+                raise ValueError("tools/call requires params")
             result = await handle_tool_call(mcp_request.params)
         elif mcp_request.method == "prompts/list":
             result = await handle_prompts_list()
         elif mcp_request.method == "prompts/get":
+            if mcp_request.params is None:
+                raise ValueError("prompts/get requires params")
             result = await handle_prompt_get(mcp_request.params)
         else:
             raise ValueError(f"Unknown method: {mcp_request.method}")
@@ -188,6 +115,23 @@ async def handle_mcp_request(
         )
 
 # Tool handlers
+async def handle_initialize(params: Optional[dict] = None):
+    """Handle initialize method within the MCP endpoint"""
+    return {
+        "protocolVersion": "0.1.0",
+        "serverInfo": {
+            "name": "microsoft-style-guide",
+            "version": "2.0.0",
+            "transport": "http+sse"
+        },
+        "capabilities": {
+            "tools": True,
+            "resources": False,
+            "prompts": True
+        }
+        # Note: Not including sessionId for VS Code compatibility
+    }
+
 async def handle_tools_list():
     return {
         "tools": [
@@ -288,31 +232,6 @@ async def handle_prompt_get(params: dict):
             }
         }
     raise ValueError(f"Unknown prompt: {prompt_name}")
-
-# SSE endpoint for streaming responses (future use)
-@app.get("/mcp/events")
-async def mcp_events(mcp_session_id: Optional[str] = Header(None)):
-    if not mcp_session_id:
-        raise HTTPException(status_code=401, detail="Session ID required")
-    
-    session = await app.state.session_manager.get_session(mcp_session_id)
-    if not session:
-        raise HTTPException(status_code=401, detail="Invalid or expired session")
-    
-    async def event_generator():
-        while True:
-            # Send heartbeat
-            yield f"event: ping\ndata: {json.dumps({'timestamp': datetime.utcnow().isoformat()})}\n\n"
-            await asyncio.sleep(30)
-    
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no"
-        }
-    )
 
 if __name__ == "__main__":
     uvicorn.run(
