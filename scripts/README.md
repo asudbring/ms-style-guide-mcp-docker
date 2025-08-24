@@ -7,6 +7,7 @@ This directory contains cross-platform shell scripts for deploying the Microsoft
 Before running these scripts, you'll need:
 
 1. **Bash shell** (available on Linux, macOS, Git Bash for Windows)
+   - **macOS Note**: These scripts work perfectly on macOS even though zsh is the default shell since macOS Catalina. The scripts use `#!/bin/bash` shebang lines to ensure they run with bash regardless of your default shell.
 2. **Docker** (20.10.0+) - https://docs.docker.com/get-docker/
 3. **Docker Compose** (2.0.0+) - https://docs.docker.com/compose/install/
 4. **OpenSSL** - Usually pre-installed on most Unix-like systems
@@ -109,6 +110,7 @@ The shell scripts automatically detect and adapt to different operating systems:
 - **OS Detection**: `Darwin*`
 - **VS Code Path**: `~/Library/Application Support/Code/User`
 - **Package Requirements**: Xcode command line tools, Docker Desktop
+- **Shell Compatibility**: Works with both bash and zsh (scripts use `#!/bin/bash` shebang)
 
 ### **Windows (Git Bash/WSL)**
 - **OS Detection**: `MINGW64_NT-*`, `MSYS_NT-*`, `CYGWIN_NT-*`
