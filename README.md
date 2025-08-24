@@ -5,10 +5,11 @@ A production-ready Docker deployment of the Microsoft Style Guide MCP Server. Th
 ## Features
 
 - **Dual Protocol Support**: HTTP (VS Code optimized) and HTTPS (production ready)
-- **Cross-Platform**: Linux bash scripts + Windows PowerShell scripts  
-- **Auto-Configuration**: Automated VS Code MCP setup
+- **Cross-Platform**: Shell scripts for Linux/macOS + PowerShell scripts for Windows  
+- **Auto-Configuration**: Automated VS Code MCP setup with cross-platform compatibility
 - **Stateless Design**: No Redis dependency, simplified architecture
 - **Production Ready**: NGINX reverse proxy with SSL termination
+- **macOS Compatible**: Works seamlessly on macOS (supports both bash and zsh environments)
 
 ## Architecture
 
@@ -36,14 +37,17 @@ A production-ready Docker deployment of the Microsoft Style Guide MCP Server. Th
 
 ### Linux/macOS Users
 ```bash
-# Quick start
-./scripts/quick-start.sh
+# Complete deployment with VS Code integration
+./scripts/deploy.sh
 
-# Step by step
-./scripts/check-prerequisites.sh
-./scripts/generate-certs.sh
-./scripts/build.sh
-./scripts/deploy-sh.sh
+# Deploy without VS Code configuration
+./scripts/deploy.sh --no-vscode
+
+# Deploy without building containers (use existing)
+./scripts/deploy.sh --no-build
+
+# Manual VS Code configuration only
+./scripts/install-mcp-config.sh --force
 ```
 
 ## Available Endpoints
@@ -71,11 +75,15 @@ The MCP server provides four tools for GitHub Copilot:
 ### Automatic Configuration
 The deployment script automatically configures VS Code MCP integration:
 ```powershell
-# Automatic VS Code setup included with deployment
+# Windows: Automatic VS Code setup included with deployment
 .\scripts\windows\deploy.ps1
 
-# Manual VS Code configuration only
-.\scripts\windows\install-mcp-config.ps1
+# Linux/macOS: Complete deployment with VS Code integration
+./scripts/deploy.sh
+
+# Manual VS Code configuration only (any platform)
+.\scripts\windows\install-mcp-config.ps1  # Windows
+./scripts/install-mcp-config.sh --force   # Linux/macOS
 ```
 
 **Important**: Uses HTTP endpoint to avoid SSL certificate issues with the VS Code MCP client.
@@ -126,9 +134,11 @@ curl -k -X POST https://localhost/mcp \
 # Stop services
 docker-compose down
 
-# Rebuild and redeploy
-./scripts/build.sh
-./scripts/deploy-sh.sh
+# Rebuild and redeploy (Linux/macOS)
+./scripts/deploy.sh --no-vscode
+
+# Windows PowerShell
+.\scripts\windows\deploy.ps1 -NoVSCode
 ```
 
 ### Viewing Logs
@@ -161,7 +171,7 @@ docker-compose logs -f mcp-nginx
 ## Certificate Management
 
 ### Self-Signed Certificates (Development)
-The setup scripts automatically generate self-signed certificates for HTTPS support. For VS Code integration, HTTP is recommended to avoid certificate validation issues.
+The setup scripts automatically generate self-signed certificates for HTTPS support. For VS Code integration, we recommend HTTP to avoid certificate validation issues.
 
 ### Production Certificates
 1. Replace certificate files in `docker/nginx/ssl/`:
@@ -178,7 +188,9 @@ docker-compose restart
 
 ### VS Code Connection Issues
 - **SSL Certificate Issues**: The deployment script automatically configures HTTP endpoint (`http://localhost/mcp`) to avoid SSL validation issues
-- **Configuration Problems**: Run `.\scripts\windows\install-mcp-config.ps1` to reconfigure VS Code MCP settings
+- **Configuration Problems**: 
+  - Windows: Run `.\scripts\windows\install-mcp-config.ps1` to reconfigure VS Code MCP settings
+  - Linux/macOS: Run `./scripts/install-mcp-config.sh --force` to reconfigure VS Code MCP settings
 - **Restart Required**: Completely close and restart VS Code after configuration changes
 - **MCP Extension**: Ensure GitHub Copilot Chat experimental MCP features are enabled
 
@@ -238,14 +250,11 @@ ms-style-guide-mcp-docker/
 │       └── ssl/                # SSL certificates directory
 │           └── .gitkeep        # Placeholder file
 ├── scripts/
-│   ├── Linux/macOS bash scripts:
-│   ├── build.sh               # Build containers
-│   ├── check-prerequisites.sh # Verify requirements
-│   ├── deploy-sh.sh          # Deploy services
-│   ├── generate-certs.sh     # Generate SSL certificates
-│   ├── install-mcp-config.sh # Configure VS Code
-│   ├── quick-start.sh        # Complete setup
-│   └── windows/              # Windows PowerShell scripts
+│   ├── deploy.sh                       # Complete deployment (Linux/macOS)
+│   ├── install-mcp-config.sh          # VS Code MCP configuration (Linux/macOS)
+│   ├── check-prerequisites.sh         # System requirements check (Linux/macOS)
+│   ├── README.md                       # Shell scripts documentation
+│   └── windows/                        # Windows PowerShell scripts
 │       ├── deploy.ps1                  # Unified deployment script
 │       ├── install-mcp-config.ps1      # VS Code MCP configuration
 │       ├── test-mcp-installation.ps1   # Installation testing
