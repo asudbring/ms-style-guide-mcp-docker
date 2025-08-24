@@ -192,7 +192,7 @@ chmod +x scripts/*.sh
 - Compatible with standard Git for Windows installation
 
 ### Certificate Handling
-- Self-signed certificates are generated automatically
+- The system automatically generates self-signed certificates
 - Browsers will show security warnings (expected for local development)
 - MCP client uses HTTP endpoint to avoid certificate validation issues
 
@@ -225,7 +225,7 @@ chmod +x scripts/*.sh
 
 # Check Docker permissions
 sudo usermod -aG docker $USER
-# (logout/login required)
+# (sign out/sign in required)
 ```
 
 #### Docker Issues
@@ -257,7 +257,7 @@ ls -la ~/AppData/Roaming/Code/User/  # Windows (Git Bash)
 ```
 
 #### SSL Certificate Issues
-- Certificates are generated automatically using OpenSSL
+- OpenSSL automatically generates certificates
 - Git Bash users: ensure Git for Windows includes OpenSSL
 - Manual certificate check: `openssl version`
 
