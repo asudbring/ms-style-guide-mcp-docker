@@ -4,7 +4,7 @@ This directory contains PowerShell equivalents of the bash scripts for Windows u
 
 ## Prerequisites
 
-Before running these scripts, ensure you have:
+Before running these scripts, you'll need:
 
 1. **PowerShell 5.1 or higher** (Windows 10/11 includes this by default)
 2. **Docker Desktop for Windows** - https://docs.docker.com/desktop/windows/
@@ -13,36 +13,32 @@ Before running these scripts, ensure you have:
 
 ## Scripts Overview
 
-### `check-prerequisites.ps1`
-Verifies that you have installed and properly configured all required software.
+### `deploy.ps1` (Primary Script)
+Unified deployment script that handles the complete setup process: SSL certificates, container building, deployment, health checks, and VS Code MCP configuration.
 
 ```powershell
-.\scripts\windows\check-prerequisites.ps1
-```
-
-### `generate-certs-fast.ps1`
-Generates self-signed SSL certificates for HTTPS support quickly with minimal prompts.
-
-```powershell
-.\scripts\windows\generate-certs-fast.ps1
-```
-
-### `build.ps1`
-Builds the Docker containers for the MCP Style Guide server.
-
-```powershell
-.\scripts\windows\build.ps1
-```
-
-### `deploy.ps1`
-Deploys the services using docker-compose. Use `-Build` parameter to build first.
-
-```powershell
-# Deploy with existing containers
+# Complete deployment with VS Code integration
 .\scripts\windows\deploy.ps1
 
-# Deploy and build containers
-.\scripts\windows\deploy.ps1 -Build
+# Deploy without VS Code configuration  
+.\scripts\windows\deploy.ps1 -NoVSCode
+
+# Deploy without building containers (use existing)
+.\scripts\windows\deploy.ps1 -NoBuild
+
+# Get help and see all options
+.\scripts\windows\deploy.ps1 -Help
+```
+
+### `install-mcp-config.ps1`
+Configures VS Code with the MCP server settings. Automatically called by `deploy.ps1` unless `-NoVSCode` is specified.
+
+```powershell
+# Configure VS Code MCP integration
+.\scripts\windows\install-mcp-config.ps1
+
+# Force configuration (overwrites existing)
+.\scripts\windows\install-mcp-config.ps1 -Force
 ```
 
 ### `test-mcp-installation.ps1`
@@ -52,52 +48,32 @@ Tests the deployed services to ensure everything is working correctly and valida
 .\scripts\windows\test-mcp-installation.ps1
 ```
 
-### `install-mcp-config.ps1`
-Automatically configures VS Code with the MCP server settings for the Microsoft Style Guide server.
-
-```powershell
-.\scripts\windows\install-mcp-config.ps1
-```
-
-### `full-auto-setup.bat`
-Complete automated setup batch file that runs the entire setup process with minimal user interaction.
-
-```batch
-.\scripts\windows\full-auto-setup.bat
-```
-
-### `quick-start.ps1`
-Complete setup script that runs all the above scripts in sequence.
-
-```powershell
-.\scripts\windows\quick-start.ps1
-```
-
 ## Quick Start
 
-To get started quickly, you have several options:
+We've simplified the deployment to a single unified script:
 
-### Option 1: Fully Automated Setup
-```batch
-.\scripts\windows\full-auto-setup.bat
-```
-
-### Option 2: PowerShell Quick Start
+### Recommended: Unified Deployment
 ```powershell
-.\scripts\windows\quick-start.ps1
-```
-
-### Option 3: Manual Step-by-Step
-1. Open PowerShell as Administrator (recommended)
-2. Navigate to the project root directory
-3. Run the scripts in sequence:
-
-```powershell
-.\scripts\windows\check-prerequisites.ps1
-.\scripts\windows\generate-certs-fast.ps1
-.\scripts\windows\build.ps1
+# Complete setup with automatic VS Code integration
 .\scripts\windows\deploy.ps1
-.\scripts\windows\test-mcp-installation.ps1
+```
+
+This script handles everything:
+- ✅ SSL certificate generation
+- ✅ Container building  
+- ✅ Service deployment
+- ✅ Health checks
+- ✅ VS Code MCP configuration
+
+### Alternative Options
+```powershell
+# Deploy without VS Code configuration
+.\scripts\windows\deploy.ps1 -NoVSCode
+
+# Deploy without building (use existing containers)
+.\scripts\windows\deploy.ps1 -NoBuild
+
+# Manual VS Code setup only
 .\scripts\windows\install-mcp-config.ps1
 ```
 
@@ -114,7 +90,7 @@ To get started quickly, you have several options:
 
 - **Certificate Warnings**: The generated certificates are self-signed, so browsers will show security warnings. Expect this behavior for local development.
 
-- **HTTP vs HTTPS**: The server supports both HTTP (port 80) and HTTPS (port 443). For VS Code MCP integration, HTTP is recommended to avoid SSL certificate issues.
+- **HTTP vs HTTPS**: The server supports both HTTP (port 80) and HTTPS (port 443). For VS Code MCP integration, we recommend HTTP to avoid SSL certificate issues.
 
 ## VS Code Integration
 
@@ -136,9 +112,10 @@ The `install-mcp-config.ps1` script automatically configures VS Code to use the 
 - Use `netstat -ano | findstr :443` or `netstat -ano | findstr :80` to identify what's using the ports
 
 ### VS Code MCP Connection Issues
-- If VS Code fails to connect to HTTPS endpoint, the HTTP endpoint is automatically configured
-- Run `.\scripts\windows\install-mcp-config.ps1` to reconfigure VS Code MCP settings
-- Restart VS Code completely after configuration changes
+- **SSL Certificate Issues**: The deployment automatically configures HTTP endpoint to avoid certificate validation problems
+- **Manual Reconfiguration**: Run `.\scripts\windows\install-mcp-config.ps1 -Force` to reset VS Code MCP settings
+- **Complete Restart**: Close VS Code completely and restart after configuration changes
+- **MCP Extension Required**: Ensure GitHub Copilot Chat with experimental MCP features is enabled
 
 ### PowerShell Execution
 - If scripts won't run, check execution policy with `Get-ExecutionPolicy`
@@ -163,7 +140,9 @@ The PowerShell scripts maintain the same functionality as their bash counterpart
 
 ## Additional Windows-Specific Features
 
-- **VS Code Integration**: Automatic MCP configuration for GitHub Copilot
-- **Dual Protocol Support**: Both HTTP and HTTPS endpoints available
-- **Automated Setup**: Batch file for one-click deployment
+- **Unified Deployment**: Single `deploy.ps1` script handles complete setup process
+- **VS Code Integration**: Automatic MCP configuration for GitHub Copilot Chat
+- **HTTP Optimization**: Uses HTTP endpoint by default to avoid SSL certificate issues
+- **Smart Certificate Handling**: Generates SSL certificates inline without external dependencies
+- **Comprehensive Health Checks**: Validates all services and endpoints before completion
 - **Windows-Optimized**: Native PowerShell commands for better Windows compatibility

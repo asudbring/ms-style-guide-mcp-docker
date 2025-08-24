@@ -1,11 +1,11 @@
 # Microsoft Style Guide MCP Server - Docker Deployment
 
-A production-ready Docker deployment of the Microsoft Style Guide MCP Server. It provides dual HTTP/HTTPS support and cross-platform setup scripts.
+A production-ready Docker deployment of the Microsoft Style Guide MCP Server. This deployment provides dual HTTP/HTTPS support and cross-platform setup scripts.
 
 ## Features
 
 - **Dual Protocol Support**: HTTP (VS Code optimized) and HTTPS (production ready)
-- **Cross-Platform**: Linux bash scripts + Windows PowerShell scripts
+- **Cross-Platform**: Linux bash scripts + Windows PowerShell scripts  
 - **Auto-Configuration**: Automated VS Code MCP setup
 - **Stateless Design**: No Redis dependency, simplified architecture
 - **Production Ready**: NGINX reverse proxy with SSL termination
@@ -20,17 +20,16 @@ A production-ready Docker deployment of the Microsoft Style Guide MCP Server. It
 
 ### Windows Users
 ```powershell
-# Option 1: Fully automated setup
-.\scripts\windows\full-auto-setup.bat
-
-# Option 2: PowerShell quick start
-.\scripts\windows\quick-start.ps1
-
-# Option 3: Step by step
-.\scripts\windows\check-prerequisites.ps1
-.\scripts\windows\generate-certs-fast.ps1
-.\scripts\windows\build.ps1
+# Unified deployment script (recommended)
 .\scripts\windows\deploy.ps1
+
+# Deploy without VS Code configuration
+.\scripts\windows\deploy.ps1 -NoVSCode
+
+# Skip building containers (use existing)
+.\scripts\windows\deploy.ps1 -NoBuild
+
+# Manual step-by-step (advanced users)
 .\scripts\windows\test-mcp-installation.ps1
 .\scripts\windows\install-mcp-config.ps1
 ```
@@ -70,10 +69,16 @@ The MCP server provides four tools for GitHub Copilot:
 4. **search_style_guide_live** - Search Microsoft Style Guide website
 
 ### Automatic Configuration
-Windows users can run:
+The deployment script automatically configures VS Code MCP integration:
 ```powershell
+# Automatic VS Code setup included with deployment
+.\scripts\windows\deploy.ps1
+
+# Manual VS Code configuration only
 .\scripts\windows\install-mcp-config.ps1
 ```
+
+**Important**: Uses HTTP endpoint to avoid SSL certificate issues with the VS Code MCP client.
 
 ### Manual Configuration
 Add to your VS Code MCP settings (`%APPDATA%\Code\User\mcp.json` on Windows):
@@ -88,19 +93,19 @@ Add to your VS Code MCP settings (`%APPDATA%\Code\User\mcp.json` on Windows):
 }
 ```
 
-## Testing the Installation
+### Testing the Installation
 
 ### Verify Services
 ```bash
 # Check container status
 docker-compose ps
 
-# Test HTTP endpoint
+# Test HTTP endpoint (recommended for VS Code)
 curl -X POST http://localhost/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
 
-# Test HTTPS endpoint (with self-signed cert)
+# Test HTTPS endpoint (for production testing)
 curl -k -X POST https://localhost/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
@@ -172,9 +177,10 @@ docker-compose restart
 ## Troubleshooting
 
 ### VS Code Connection Issues
-- **SSL Errors**: Use HTTP endpoint (`http://localhost/mcp`) instead of HTTPS
-- **Configuration**: Run the installer script: `.\scripts\windows\install-mcp-config.ps1`
+- **SSL Certificate Issues**: The deployment script automatically configures HTTP endpoint (`http://localhost/mcp`) to avoid SSL validation issues
+- **Configuration Problems**: Run `.\scripts\windows\install-mcp-config.ps1` to reconfigure VS Code MCP settings
 - **Restart Required**: Completely close and restart VS Code after configuration changes
+- **MCP Extension**: Ensure GitHub Copilot Chat experimental MCP features are enabled
 
 ### Container Issues
 ```bash
@@ -240,15 +246,10 @@ ms-style-guide-mcp-docker/
 │   ├── install-mcp-config.sh # Configure VS Code
 │   ├── quick-start.sh        # Complete setup
 │   └── windows/              # Windows PowerShell scripts
-│       ├── build.ps1
-│       ├── check-prerequisites.ps1
-│       ├── deploy.ps1
-│       ├── full-auto-setup.bat      # Fully automated setup
-│       ├── generate-certs-fast.ps1
-│       ├── install-mcp-config.ps1
-│       ├── quick-start.ps1
-│       ├── test-mcp-installation.ps1
-│       └── README.md               # Windows-specific documentation
+│       ├── deploy.ps1                  # Unified deployment script
+│       ├── install-mcp-config.ps1      # VS Code MCP configuration
+│       ├── test-mcp-installation.ps1   # Installation testing
+│       └── README.md                   # Windows-specific documentation
 ├── .vscode/
 │   └── mcp-config.json        # Sample VS Code MCP configuration
 ├── docker-compose.yml         # Base configuration
